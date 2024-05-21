@@ -4,6 +4,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -23,6 +24,7 @@ var (
 	}
 	state          = "random"
 	appID          = os.Getenv("APP_ID")
+	appName        = "vascendio"
 	privateKey     *rsa.PrivateKey
 	privateKeyPath = os.Getenv("PRIVATE_KEY_PATH")
 )
@@ -51,6 +53,7 @@ func main() {
 
 	router.GET("/login", handleLogin)
 	router.GET("/callback", handleCallback)
+	router.GET("/install", handleInstall) // New route for installation
 
 	router.Run(":8080")
 }
@@ -76,6 +79,12 @@ func handleCallback(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"access_token": tok.AccessToken, "jwt": jwtToken})
+}
+
+func handleInstall(c *gin.Context) {
+	// Redirect to GitHub App installation page
+	installURL := fmt.Sprintf("https://github.com/apps/%s/installations/new", appName)
+	c.Redirect(http.StatusFound, installURL)
 }
 
 func generateJWT() (string, error) {
