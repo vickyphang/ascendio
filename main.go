@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"net/http"
@@ -22,20 +23,24 @@ var (
 		Scopes:       []string{"user:email"},
 		Endpoint:     ghOauth.Endpoint,
 	}
-	state          = "random"
-	appID          = os.Getenv("APP_ID")
-	appName        = "vascendio"
-	privateKey     *rsa.PrivateKey
-	privateKeyPath = os.Getenv("PRIVATE_KEY_PATH")
+	state      = "random"
+	appID      = os.Getenv("APP_ID")
+	appName    = os.Getenv("APP_NAME")
+	privateKey *rsa.PrivateKey
 )
 
 func init() {
-	keyData, err := os.ReadFile(privateKeyPath)
-	if err != nil {
-		panic(err)
+	keyData := os.Getenv("PRIVATE_KEY_PEM")
+	if keyData == "" {
+		panic("PRIVATE_KEY_PEM environment variable is not set")
 	}
 
-	block, _ := pem.Decode(keyData)
+	decodedKey, err := base64.StdEncoding.DecodeString(keyData)
+	if err != nil {
+		panic("failed to decode base64 encoded private key PEM")
+	}
+
+	block, _ := pem.Decode(decodedKey)
 	if block == nil || block.Type != "RSA PRIVATE KEY" {
 		panic("failed to decode PEM block containing private key")
 	}
