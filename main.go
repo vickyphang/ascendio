@@ -1,17 +1,23 @@
 package main
 
 import (
+	"crypto/hmac"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/go-github/v37/github"
 	"golang.org/x/oauth2"
 	ghOauth "golang.org/x/oauth2/github"
 )
@@ -23,10 +29,11 @@ var (
 		Scopes:       []string{"user:email"},
 		Endpoint:     ghOauth.Endpoint,
 	}
-	state      = "random"
-	appID      = os.Getenv("APP_ID")
-	appName    = os.Getenv("APP_NAME")
-	privateKey *rsa.PrivateKey
+	state         = "random"
+	appID         = os.Getenv("APP_ID")
+	appName       = os.Getenv("APP_NAME")
+	privateKey    *rsa.PrivateKey
+	webhookSecret = os.Getenv("WEBHOOK_SECRET")
 )
 
 func init() {
@@ -58,7 +65,8 @@ func main() {
 
 	router.GET("/login", handleLogin)
 	router.GET("/callback", handleCallback)
-	router.GET("/install", handleInstall) // New route for installation
+	router.GET("/install", handleInstall)  // New route for installation
+	router.POST("/webhook", handleWebhook) // New route for webhook
 
 	router.Run(":8080")
 }
@@ -90,6 +98,55 @@ func handleInstall(c *gin.Context) {
 	// Redirect to GitHub App installation page
 	installURL := fmt.Sprintf("https://github.com/apps/%s/installations/new", appName)
 	c.Redirect(http.StatusFound, installURL)
+}
+
+func handleWebhook(c *gin.Context) {
+	// Print headers
+	fmt.Println("Headers:")
+	for key, values := range c.Request.Header {
+		for _, value := range values {
+			fmt.Printf("%s: %s\n", key, value)
+		}
+	}
+
+	// Read and print the body
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return
+	}
+	fmt.Println("Body:")
+	fmt.Println(string(body))
+
+	// Validate signature
+	signature := c.Request.Header.Get("X-Hub-Signature-256")
+	if !validateSignature(body, signature) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
+		return
+	}
+
+	// Parse the event type
+	event := c.Request.Header.Get("X-GitHub-Event")
+	if event == "push" {
+		var pushEvent github.PushEvent
+		if err := json.Unmarshal(body, &pushEvent); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse push event"})
+			return
+		}
+
+		// Process the push event
+		fmt.Printf("Received push event: %+v\n", pushEvent)
+		// Add your code to handle the push event here
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Webhook received"})
+}
+
+func validateSignature(payload []byte, signature string) bool {
+	mac := hmac.New(sha256.New, []byte(webhookSecret))
+	mac.Write(payload)
+	expectedSignature := "sha256=" + hex.EncodeToString(mac.Sum(nil))
+	return hmac.Equal([]byte(expectedSignature), []byte(signature))
 }
 
 func generateJWT() (string, error) {
