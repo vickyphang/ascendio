@@ -66,8 +66,8 @@ func main() {
 
 	router.GET("/login", handleLogin)
 	router.GET("/callback", handleCallback)
-	router.GET("/install", handleInstall)  // New route for installation
-	router.POST("/webhook", handleWebhook) // New route for webhook
+	router.GET("/install", handleInstall)
+	router.POST("/webhook", handleWebhook)
 
 	router.Run(":8080")
 }
