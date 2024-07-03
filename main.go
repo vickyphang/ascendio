@@ -2,21 +2,22 @@ package main
 
 import (
 	"crypto/hmac"
-	"crypto/rsa"
 	"crypto/sha256"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"time"
 
+	// "crypto/rsa"
+	// "crypto/x509"
+	// "encoding/base64"
+	// "encoding/pem"
+	// "time"
+
+	// "github.com/golang-jwt/jwt/v5"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/go-github/v37/github"
 	"golang.org/x/oauth2"
 	ghOauth "golang.org/x/oauth2/github"
@@ -29,36 +30,36 @@ var (
 		Scopes:       []string{"user:email"},
 		Endpoint:     ghOauth.Endpoint,
 	}
-	state         = "random"
-	appID         = os.Getenv("APP_ID")
-	appName       = os.Getenv("APP_NAME")
-	privateKey    *rsa.PrivateKey
+	state = "random"
+	// appID   = os.Getenv("APP_ID")
+	appName = os.Getenv("APP_NAME")
+	// privateKey    *rsa.PrivateKey
 	webhookSecret = os.Getenv("WEBHOOK_SECRET")
 )
 
-func init() {
-	keyData := os.Getenv("PRIVATE_KEY_PEM")
-	if keyData == "" {
-		panic("PRIVATE_KEY_PEM environment variable is not set")
-	}
+// func init() {
+// 	keyData := os.Getenv("PRIVATE_KEY_PEM")
+// 	if keyData == "" {
+// 		panic("PRIVATE_KEY_PEM environment variable is not set")
+// 	}
 
-	decodedKey, err := base64.StdEncoding.DecodeString(keyData)
-	if err != nil {
-		panic("failed to decode base64 encoded private key PEM")
-	}
+// 	decodedKey, err := base64.StdEncoding.DecodeString(keyData)
+// 	if err != nil {
+// 		panic("failed to decode base64 encoded private key PEM")
+// 	}
 
-	block, _ := pem.Decode(decodedKey)
-	if block == nil || block.Type != "RSA PRIVATE KEY" {
-		panic("failed to decode PEM block containing private key")
-	}
+// 	block, _ := pem.Decode(decodedKey)
+// 	if block == nil || block.Type != "RSA PRIVATE KEY" {
+// 		panic("failed to decode PEM block containing private key")
+// 	}
 
-	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		panic(err)
-	}
+// 	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	privateKey = privKey
-}
+// 	privateKey = privKey
+// }
 
 func main() {
 	router := gin.Default()
@@ -84,14 +85,15 @@ func handleCallback(c *gin.Context) {
 		return
 	}
 
-	// Now generate JWT for GitHub App
-	jwtToken, err := generateJWT()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+	// // Now generate JWT for GitHub App
+	// jwtToken, err := generateJWT()
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// 	return
+	// }
 
-	c.JSON(http.StatusOK, gin.H{"access_token": tok.AccessToken, "jwt": jwtToken})
+	// c.JSON(http.StatusOK, gin.H{"access_token": tok.AccessToken, "jwt": jwtToken})
+	c.JSON(http.StatusOK, gin.H{"access_token": tok.AccessToken})
 }
 
 func handleInstall(c *gin.Context) {
@@ -149,18 +151,18 @@ func validateSignature(payload []byte, signature string) bool {
 	return hmac.Equal([]byte(expectedSignature), []byte(signature))
 }
 
-func generateJWT() (string, error) {
-	now := time.Now().Unix()
-	claims := jwt.MapClaims{
-		"iat": now,
-		"exp": now + (10 * 60),
-		"iss": appID,
-	}
+// func generateJWT() (string, error) {
+// 	now := time.Now().Unix()
+// 	claims := jwt.MapClaims{
+// 		"iat": now,
+// 		"exp": now + (10 * 60),
+// 		"iss": appID,
+// 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	signedToken, err := token.SignedString(privateKey)
-	if err != nil {
-		return "", err
-	}
-	return signedToken, nil
-}
+// 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+// 	signedToken, err := token.SignedString(privateKey)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return signedToken, nil
+// }
