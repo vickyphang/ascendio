@@ -54,6 +54,7 @@ docker run -p 8080:8080 --name golang-app /
     -e CLIENT_ID="<client-id>" /
     -e CLIENT_SECRET="<client-secret>" /
     -e APP_ID="<app-id>" /
+    -e APP_NAME='<app-name>'
     -e WEBHOOK_SECRET="<webhook-secret>" /
     -e PRIVATE_KEY_PEM="<base64-encoded-key-pem>" /
     golang-app:v1
